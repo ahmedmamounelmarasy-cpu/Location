@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOCATION - Coffee Shop & Mini Market</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-red: #FF2400;
+            --dark-red: #8B0000;
+            --bg-black: #000000;
+            --text-white: #FFFFFF;
+        }
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: var(--bg-black);
+            color: var(--text-white);
+            overflow-x: hidden;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-red);
+            border-radius: 10px;
+        }
+        .gradient-text {
+            background: linear-gradient(45deg, var(--primary-red), #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .product-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .product-card:hover {
+            border-color: var(--primary-red);
+            transform: scale(1.02);
+            box-shadow: 0 10px 30px rgba(255, 36, 0, 0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, var(--primary-red), var(--dark-red));
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: rotate(45deg);
+            transition: 0.5s;
+        }
+        .btn-primary:hover::after {
+            left: 100%;
+        }
+        .cart-badge {
+            background-color: var(--primary-red);
+        }
+        .scroll-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .loader-ring {
+            width: 80px;
+            height: 80px;
+            border: 4px solid rgba(255, 36, 0, 0.1);
+            border-top: 4px solid var(--primary-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .pin-logo {
+            filter: drop-shadow(0 0 20px rgba(255, 36, 0, 0.6));
+            animation: pulse 2.5s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(255, 36, 0, 0.6)); }
+            50% { transform: scale(1.08); filter: drop-shadow(0 0 35px rgba(255, 36, 0, 0.9)); }
+        }
+        .hero-bg-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 15vw;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.03);
+            white-space: nowrap;
+            z-index: -1;
+            pointer-events: none;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body>
+    <div id="loader">
+        <div class="loader-ring"></div>
+    </div>
+    <!-- Navigation -->
+    <nav class="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <svg class="h-10 w-10 text-red-600" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+                <span class="text-2xl font-black tracking-tighter">LOCATION</span>
+            </div>
+            <div class="flex items-center gap-6">
+                <button id="cart-btn" class="relative p-2 hover:text-red-500 transition-colors">
+                    <i data-lucide="shopping-cart"></i>
+                    <span id="cart-count" class="cart-badge absolute -top-1 -right-1 text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative h-screen flex items-center justify-center overflow-hidden pt-20">
+        <div class="absolute inset-0 z-0">
+            <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black z-10"></div>
+            <img src="https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&q=80&w=2000" alt="Cafe Background" class="w-full h-full object-cover">
+        </div>
+        
+        <div class="container mx-auto px-6 relative z-20 text-center flex flex-col items-center">
+            <div class="hero-bg-text opacity-0" id="hero-bg-text">LOCATION</div>
+            <div id="hero-logo" class="mb-8 opacity-0">
+                <svg class="h-40 w-40 md:h-64 md:w-64 text-red-600 pin-logo" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+            </div>
+            <h1 id="hero-title" class="text-5xl md:text-7xl font-black mb-4 opacity-0 tracking-[0.2em]">
+                LOCATION
+            </h1>
+            <p id="hero-subtitle" class="text-lg md:text-xl text-gray-400 mb-10 opacity-0 font-medium">
+                قهوتك المفضلة.. في مكانك المفضل
+            </p>
+            <div id="hero-btns" class="flex flex-wrap justify-center gap-4 opacity-0">
+                <a href="#menu" class="btn-primary px-10 py-4 rounded-full font-bold text-lg">تصفح القائمة</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Menu Section -->
+    <section id="menu" class="py-24 bg-[#050505]">
+        <div class="container mx-auto px-6">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-black mb-4 scroll-reveal">قائمة <span class="text-red-600">المنتجات</span></h2>
+                <div class="w-20 h-1 bg-red-600 mx-auto rounded-full scroll-reveal"></div>
+            </div>
+
+            <!-- Categories -->
+            <div class="flex flex-wrap justify-center gap-4 mb-12 scroll-reveal">
+                <button class="category-btn active bg-red-600 px-6 py-2 rounded-full font-bold">الكل</button>
+                <button class="category-btn bg-white/5 hover:bg-white/10 px-6 py-2 rounded-full font-bold transition-all">قهوة ساخنة</button>
+                <button class="category-btn bg-white/5 hover:bg-white/10 px-6 py-2 rounded-full font-bold transition-all">مشروبات باردة</button>
+                <button class="category-btn bg-white/5 hover:bg-white/10 px-6 py-2 rounded-full font-bold transition-all">حلويات</button>
+            </div>
+
+            <!-- Products Grid (Strictly 2 per row as requested) -->
+            <div id="products-grid" class="grid grid-cols-2 gap-4 md:gap-12 max-w-5xl mx-auto">
+                <!-- Products will be injected here -->
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-black border-t border-white/10 py-12">
+        <div class="container mx-auto px-6 text-center">
+            <div class="flex items-center justify-center gap-2 mb-6">
+                <a href="admin.html" class="flex items-center gap-2 group">
+                    <svg class="h-8 w-8 text-red-600 group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                    </svg>
+                    <span class="text-xl font-black">LOCATION</span>
+                </a>
+            </div>
+            <p class="text-gray-500 text-sm">© 2026 لوكيشن كافيه. جميع الحقوق محفوظة.</p>
+        </div>
+    </footer>
+
+    <!-- Cart Sidebar (Simplified) -->
+    <div id="cart-sidebar" class="fixed top-0 left-0 w-full md:w-96 h-full bg-black border-r border-white/10 z-[60] transform -translate-x-full transition-transform duration-500 shadow-2xl">
+        <div class="p-6 flex flex-col h-full">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-2xl font-bold">سلة الطلبات</h3>
+                <button id="close-cart" class="p-2 hover:bg-white/10 rounded-full transition-all">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div id="cart-items" class="flex-grow overflow-y-auto space-y-4">
+                <!-- Cart items will be here -->
+                <p class="text-gray-500 text-center py-10">السلة فارغة حالياً</p>
+            </div>
+            <div class="pt-6 border-t border-white/10">
+                <div class="flex justify-between items-center mb-6">
+                    <span class="text-lg">الإجمالي:</span>
+                    <span id="cart-total" class="text-2xl font-bold text-red-500">0.00 ج.م</span>
+                </div>
+                <button id="checkout-btn" class="w-full btn-primary py-4 rounded-xl font-bold text-lg">تأكيد الطلب</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
