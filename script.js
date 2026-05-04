@@ -254,10 +254,13 @@ function removeFromCart(productId) {
 
 function updateCartUI() {
     cartCountElement.innerText = cart.reduce((total, item) => total + item.quantity, 0);
+    const orderDetailsSection = document.getElementById('order-details-section');
     
     if (cart.length === 0) {
         cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center py-10">السلة فارغة حالياً</p>';
+        if (orderDetailsSection) orderDetailsSection.classList.add('hidden');
     } else {
+        if (orderDetailsSection) orderDetailsSection.classList.remove('hidden');
         cartItemsContainer.innerHTML = cart.map(item => `
             <div class="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10">
                 <img src="${item.image}" alt="${item.name}" class="w-16 h-16 rounded-xl object-cover">
@@ -311,19 +314,78 @@ function initAnimations() {
     initScrollReveal();
 }
 
-function checkout() {
+async function checkout() {
     if (cart.length === 0) return;
     
-    let message = "مرحباً لوكيشن كافيه، أود طلب الآتي:\n\n";
-    cart.forEach(item => {
-        message += `- ${item.name} (العدد: ${item.quantity}) - السعر: ${item.price * item.quantity} ج.م\n`;
-    });
-    
+    // Validate Table Number
+    const tableSelect = document.getElementById('table-number');
+    const tableNumber = tableSelect ? tableSelect.value : '';
+    const orderNote = document.getElementById('order-note')?.value || '';
+
+    if (!tableNumber) {
+        alert('يرجى اختيار رقم الطاولة قبل تأكيد الطلب');
+        tableSelect.focus();
+        tableSelect.classList.add('border-red-600');
+        setTimeout(() => tableSelect.classList.remove('border-red-600'), 2000);
+        return;
+    }
+
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    message += `\n*الإجمالي: ${total} ج.م*`;
+
+    // Create Order Object for Supabase
+    const newOrder = {
+        items: cart.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity
+        })),
+        total: total,
+        table_number: tableNumber,
+        note: orderNote,
+        status: 'pending'
+    };
+
+    // Save to Supabase
+    const { data, error } = await supabaseClient
+        .from('orders')
+        .insert([newOrder]);
+
+    if (error) {
+        console.error('Error saving order:', error);
+        alert('حدث خطأ: ' + (error.message || 'يرجى التأكد من إعدادات Supabase'));
+        return;
+    }
+
+    // Clear cart and update UI before redirecting
+    cart = [];
+    if (tableSelect) tableSelect.value = '';
+    const noteEl = document.getElementById('order-note');
+    if (noteEl) noteEl.value = '';
     
-    const whatsappUrl = `https://wa.me/+201234567890?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    updateCartUI();
+    renderProducts(document.querySelector('.category-btn.active')?.innerText || 'الكل', true);
+    closeCartSidebar();
+
+    // Success animation and modal
+    const btn = document.getElementById('checkout-btn');
+    const originalText = btn.innerText;
+    btn.innerText = "تم الإرسال بنجاح!";
+    btn.style.backgroundColor = "#22c55e";
+
+    setTimeout(() => {
+        // Show success modal
+        document.getElementById('success-modal').classList.remove('hidden');
+        lucide.createIcons();
+        
+        // Reset button
+        btn.innerText = originalText;
+        btn.style.backgroundColor = "";
+    }, 800);
+}
+
+function closeSuccessModal() {
+    document.getElementById('success-modal').classList.add('hidden');
 }
 
 // Event Listeners

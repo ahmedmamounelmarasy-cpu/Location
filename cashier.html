@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سيستم الكاشير - LOCATION</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-red: #FF2400;
+            --bg-black: #050505;
+            --card-bg: rgba(255, 255, 255, 0.05);
+        }
+        body { 
+            font-family: 'Cairo', sans-serif; 
+            background: var(--bg-black); 
+            color: #fff;
+            min-height: screen;
+        }
+        .order-card { 
+            background: var(--card-bg); 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        .order-card.new-order {
+            border-color: var(--primary-red);
+            box-shadow: 0 0 20px rgba(255, 36, 0, 0.2);
+            animation: pulse-border 2s infinite;
+        }
+        @keyframes pulse-border {
+            0% { border-color: rgba(255, 36, 0, 0.5); }
+            50% { border-color: rgba(255, 36, 0, 1); }
+            100% { border-color: rgba(255, 36, 0, 0.5); }
+        }
+        .status-badge {
+            padding: 2px 10px;
+            border-radius: 99px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-pending { background: rgba(255, 165, 0, 0.2); color: #ffa500; }
+        .status-completed { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: var(--primary-red); border-radius: 10px; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6">
+        <div class="max-w-md w-full order-card p-8 rounded-3xl text-center">
+            <svg class="h-16 w-16 text-red-600 mx-auto mb-6" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+            </svg>
+            <h1 class="text-3xl font-black mb-2">سيستم الكاشير</h1>
+            <p class="text-gray-400 mb-8">أدخل كلمة المرور للدخول للسيستم</p>
+            <input type="password" id="admin-password" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 mb-4 text-center focus:border-red-600 outline-none" placeholder="كلمة المرور">
+            <button onclick="checkPassword()" class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-xl font-bold text-lg transition-all">دخول</button>
+            <p id="login-error" class="text-red-500 mt-4 hidden">كلمة المرور غير صحيحة!</p>
+        </div>
+    </div>
+
+    <!-- Main Content (Hidden by default) -->
+    <div id="cashier-content" class="hidden">
+        <nav class="flex justify-between items-center mb-10 bg-black/50 backdrop-blur-md p-4 rounded-2xl border border-white/10 sticky top-4 z-50">
+        <div class="flex items-center gap-3">
+            <div class="bg-red-600 p-2 rounded-lg">
+                <i data-lucide="layout-dashboard" class="w-6 h-6 text-white"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-black">سيستم الكاشير</h1>
+                <p class="text-[10px] text-gray-500 uppercase tracking-widest">Location Management</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-4">
+            <button id="enable-sound" onclick="activateSound()" class="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all text-gray-400 hover:text-white">
+                <i data-lucide="volume-x" class="w-4 h-4"></i>
+                تفعيل التنبيه الصوتي
+            </button>
+            <div id="connection-status" class="flex items-center gap-2 px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-xs font-bold">
+                <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                متصل مباشر
+            </div>
+        </div>
+    </nav>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- New Orders Column -->
+        <div class="lg:col-span-2">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    الطلبات الحالية
+                    <span id="active-count" class="bg-red-600 text-white text-xs px-2 py-1 rounded-md">0</span>
+                </h2>
+            </div>
+            <div id="orders-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Orders will be injected here -->
+                <div id="no-orders" class="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-3xl">
+                    <i data-lucide="coffee" class="w-12 h-12 text-gray-700 mx-auto mb-4"></i>
+                    <p class="text-gray-500">لا توجد طلبات جديدة حالياً</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary & Stats -->
+        <div class="space-y-6">
+            <div class="order-card p-6 rounded-3xl">
+                <h3 class="text-lg font-bold mb-4">إحصائيات اليوم</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                        <p class="text-gray-400 text-xs mb-1">إجمالي الطلبات</p>
+                        <p id="stat-total-orders" class="text-2xl font-black">0</p>
+                    </div>
+                    <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                        <p class="text-gray-400 text-xs mb-1">المبيعات</p>
+                        <p id="stat-total-sales" class="text-2xl font-black text-green-500">0</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Audio for notifications -->
+    <audio id="notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto"></audio>
+
+    <script>
+        lucide.createIcons();
+        
+        const ADMIN_PASSWORD = "123";
+
+        function checkPassword() {
+            const pass = document.getElementById('admin-password').value;
+            if (pass === ADMIN_PASSWORD) {
+                document.getElementById('login-overlay').style.display = 'none';
+                document.getElementById('cashier-content').classList.remove('hidden');
+                loadOrders();
+                lucide.createIcons();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+            }
+        }
+
+        // Supabase Configuration
+        const SUPABASE_URL = 'https://xxvxynoesnpiitlbglpk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4dnh5bm9lc25waWl0bGJnbHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3NzA2NjcsImV4cCI6MjA5MzM0NjY2N30.ZZ5drqV3hnO68ZTZ1nkhrs_JN3lz_987fIDsLeyYSgE';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let orders = [];
+        let soundEnabled = false;
+        const notificationSound = document.getElementById('notification-sound');
+
+        function activateSound() {
+            soundEnabled = true;
+            notificationSound.play().then(() => {
+                notificationSound.pause();
+                notificationSound.currentTime = 0;
+                
+                const btn = document.getElementById('enable-sound');
+                btn.innerHTML = '<i data-lucide="volume-2" class="w-4 h-4"></i> التنبيه الصوتي مفعل';
+                btn.classList.remove('text-gray-400');
+                btn.classList.add('text-green-500', 'border-green-500/50', 'bg-green-500/5');
+                lucide.createIcons();
+            }).catch(e => console.error("Audio playback failed:", e));
+        }
+
+        async function loadOrders() {
+            const { data, error } = await supabaseClient
+                .from('orders')
+                .select('*')
+                .order('created_at', { ascending: false });
+            
+            if (error) {
+                console.error('Error fetching orders:', error);
+                return;
+            }
+
+            orders = data;
+            renderOrders();
+            updateStats();
+        }
+
+        // Subscribe to real-time changes
+        supabaseClient
+            .channel('public:orders')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
+                if (payload.eventType === 'INSERT') {
+                    if (soundEnabled) {
+                        notificationSound.currentTime = 0;
+                        notificationSound.play().catch(e => console.log('Sound blocked'));
+                    }
+                    // Mark as new for animation
+                    payload.new.isNew = true;
+                }
+                loadOrders();
+            })
+            .subscribe();
+
+        function renderOrders() {
+            const container = document.getElementById('orders-container');
+            const noOrders = document.getElementById('no-orders');
+            const activeOrders = orders.filter(o => o.status === 'pending');
+            
+            if (activeOrders.length === 0) {
+                noOrders.style.display = 'block';
+                container.querySelectorAll('.order-card-item').forEach(el => el.remove());
+            } else {
+                noOrders.style.display = 'none';
+                
+                const orderHtml = activeOrders.map(order => `
+                    <div class="order-card order-card-item p-6 rounded-3xl flex flex-col h-full ${order.isNew ? 'new-order' : ''}" id="order-${order.id}">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-[10px] text-gray-500 uppercase tracking-tighter">#${order.id.slice(-4)}</span>
+                                    <span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">طاولة ${order.table_number}</span>
+                                </div>
+                                <span class="status-badge status-pending">قيد التنفيذ</span>
+                            </div>
+                            <div class="text-left">
+                                <span class="text-xs text-gray-500">${new Date(order.created_at).toLocaleTimeString('ar-EG')}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-grow space-y-3 mb-6">
+                            ${order.items.map(item => `
+                                <div class="flex justify-between items-center text-sm border-b border-white/5 pb-2">
+                                    <div class="flex items-center gap-2">
+                                        <span class="bg-white/10 w-6 h-6 flex items-center justify-center rounded text-[10px] font-bold">${item.quantity}x</span>
+                                        <span>${item.name}</span>
+                                    </div>
+                                    <span class="text-gray-400">${item.price * item.quantity} ج.م</span>
+                                </div>
+                            `).join('')}
+
+                            ${order.note ? `
+                                <div class="bg-yellow-500/10 border border-yellow-500/20 p-3 rounded-xl mt-4">
+                                    <p class="text-[10px] text-yellow-500 font-bold mb-1 flex items-center gap-1">
+                                        <i data-lucide="message-square" class="w-3 h-3"></i> ملاحظة العميل:
+                                    </p>
+                                    <p class="text-xs text-gray-300 italic">"${order.note}"</p>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div class="flex justify-between items-center pt-4 border-t border-white/10 mb-4">
+                            <span class="font-bold">الإجمالي</span>
+                            <span class="text-xl font-black text-red-500">${order.total} ج.م</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="completeOrder('${order.id}')" class="bg-green-600 hover:bg-green-700 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2">
+                                <i data-lucide="check" class="w-4 h-4"></i> تم التسليم
+                            </button>
+                            <button onclick="deleteOrder('${order.id}')" class="bg-white/5 hover:bg-white/10 py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 text-gray-400">
+                                <i data-lucide="x" class="w-4 h-4"></i> إلغاء
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+                
+                const currentItems = container.querySelectorAll('.order-card-item');
+                currentItems.forEach(item => item.remove());
+                container.insertAdjacentHTML('beforeend', orderHtml);
+            }
+
+            document.getElementById('active-count').innerText = activeOrders.length;
+            lucide.createIcons();
+        }
+
+        function updateStats() {
+            const completed = orders.filter(o => o.status === 'completed');
+            const totalSales = completed.reduce((sum, o) => sum + o.total, 0);
+            
+            document.getElementById('stat-total-orders').innerText = orders.length;
+            document.getElementById('stat-total-sales').innerText = totalSales + ' ج.م';
+        }
+
+        async function completeOrder(id) {
+            const { error } = await supabaseClient
+                .from('orders')
+                .update({ status: 'completed' })
+                .eq('id', id);
+            
+            if (error) alert('خطأ في تحديث الطلب');
+        }
+
+        async function deleteOrder(id) {
+            if (confirm('هل أنت متأكد من إلغاء هذا الطلب؟')) {
+                const { error } = await supabaseClient
+                    .from('orders')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) alert('خطأ في حذف الطلب');
+            }
+        }
+
+        // Initialize
+        // loadOrders(); // Removed to load only after password check
+
+        // Remove "new" status after 10s
+        setInterval(() => {
+            orders.forEach(o => o.isNew = false);
+        }, 10000);
+    </script>
+</body>
+</html>
