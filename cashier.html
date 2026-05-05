@@ -79,6 +79,10 @@
             </div>
         </div>
         <div class="flex items-center gap-4">
+            <button onclick="openHistoryModal()" class="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all text-gray-400 hover:text-white">
+                <i data-lucide="history" class="w-4 h-4 text-red-600"></i>
+                سجل الطلبات الشامل
+            </button>
             <button id="enable-sound" onclick="activateSound()" class="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold transition-all text-gray-400 hover:text-white">
                 <i data-lucide="volume-x" class="w-4 h-4"></i>
                 تفعيل التنبيه الصوتي
@@ -123,6 +127,70 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+<!-- History Modal -->
+<div id="history-modal" class="fixed inset-0 z-[110] bg-black/95 backdrop-blur-md hidden flex items-center justify-center p-4 md:p-10">
+    <div class="max-w-5xl w-full order-card p-6 md:p-8 rounded-3xl flex flex-col max-h-[90vh]">
+        <div class="flex justify-between items-center mb-8">
+            <h3 class="text-2xl font-black flex items-center gap-3">
+                <i data-lucide="history" class="text-red-600"></i>
+                سجل الطلبات التفصيلي (الكل)
+            </h3>
+            <button onclick="closeHistoryModal()" class="p-2 hover:bg-white/10 rounded-full transition-all text-gray-400">
+                <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <!-- Filter and Search -->
+        <div class="flex flex-wrap items-center gap-4 mb-8 bg-white/5 p-4 rounded-2xl border border-white/5">
+            <div class="flex items-center gap-3">
+                <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">تصفية بالتاريخ:</label>
+                <input type="date" id="history-date-filter" onchange="filterHistoryByDate()" class="bg-black/50 border border-white/10 rounded-xl px-4 py-2 text-sm focus:border-red-600 outline-none text-white">
+            </div>
+            <button onclick="resetHistoryFilter()" class="text-xs font-bold text-red-500 hover:text-red-400 transition-all flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i> عرض كل الأيام
+            </button>
+        </div>
+
+        <!-- Stats in History -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                <p class="text-gray-500 text-[10px] uppercase font-bold mb-1">إجمالي الطلبات</p>
+                <p id="hist-total-orders" class="text-xl font-black">0</p>
+            </div>
+            <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                <p class="text-gray-500 text-[10px] uppercase font-bold mb-1">الطلبات المكتملة</p>
+                <p id="hist-completed-orders" class="text-xl font-black text-green-500">0</p>
+            </div>
+            <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                <p class="text-gray-500 text-[10px] uppercase font-bold mb-1">الطلبات الملغاة</p>
+                <p id="hist-deleted-orders" class="text-xl font-black text-red-500">0</p>
+            </div>
+            <div class="bg-white/5 p-4 rounded-2xl border border-white/5">
+                <p class="text-gray-500 text-[10px] uppercase font-bold mb-1">صافي المبيعات</p>
+                <p id="hist-total-sales" class="text-xl font-black text-blue-500">0 ج.م</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto custom-scrollbar flex-grow">
+            <table class="w-full text-right">
+                <thead class="bg-white/5 sticky top-0">
+                    <tr>
+                        <th class="p-4 text-xs font-bold text-gray-500">رقم الطلب</th>
+                        <th class="p-4 text-xs font-bold text-gray-500">التاريخ والوقت</th>
+                        <th class="p-4 text-xs font-bold text-gray-500">الطاولة</th>
+                        <th class="p-4 text-xs font-bold text-gray-500">الطلبات</th>
+                        <th class="p-4 text-xs font-bold text-gray-500">الإجمالي</th>
+                        <th class="p-4 text-xs font-bold text-gray-500">الحالة</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body" class="divide-y divide-white/5">
+                    <!-- History rows will be injected here -->
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -275,11 +343,82 @@
         }
 
         function updateStats() {
-            const completed = orders.filter(o => o.status === 'completed');
+            const allOrders = orders;
+            
+            const completed = allOrders.filter(o => o.status === 'completed');
             const totalSales = completed.reduce((sum, o) => sum + o.total, 0);
             
-            document.getElementById('stat-total-orders').innerText = orders.length;
+            document.getElementById('stat-total-orders').innerText = allOrders.length;
             document.getElementById('stat-total-sales').innerText = totalSales + ' ج.م';
+
+            filterHistoryByDate(); // Apply current filter
+        }
+
+        function filterHistoryByDate() {
+            const selectedDate = document.getElementById('history-date-filter').value;
+            let filtered = orders;
+
+            if (selectedDate) {
+                filtered = orders.filter(order => {
+                    const orderDate = new Date(order.created_at).toISOString().split('T')[0];
+                    return orderDate === selectedDate;
+                });
+            }
+
+            const completed = filtered.filter(o => o.status === 'completed');
+            const totalSales = completed.reduce((sum, o) => sum + o.total, 0);
+
+            document.getElementById('hist-total-orders').innerText = filtered.length;
+            document.getElementById('hist-completed-orders').innerText = completed.length;
+            document.getElementById('hist-deleted-orders').innerText = filtered.filter(o => o.status === 'deleted').length;
+            document.getElementById('hist-total-sales').innerText = totalSales + ' ج.م';
+
+            renderHistory(filtered);
+        }
+
+        function resetHistoryFilter() {
+            document.getElementById('history-date-filter').value = '';
+            filterHistoryByDate();
+        }
+
+        function renderHistory(allOrders) {
+            const tbody = document.getElementById('history-table-body');
+            tbody.innerHTML = allOrders.map(order => `
+                <tr class="hover:bg-white/5 transition-all">
+                    <td class="p-4 text-xs font-mono text-gray-500">#${order.id.slice(-6)}</td>
+                    <td class="p-4 text-sm">
+                        <div class="font-bold">${new Date(order.created_at).toLocaleDateString('ar-EG')}</div>
+                        <div class="text-[10px] text-gray-500">${new Date(order.created_at).toLocaleTimeString('ar-EG', {hour: '2-digit', minute:'2-digit'})}</div>
+                    </td>
+                    <td class="p-4 font-bold text-red-500">طاولة ${order.table_number}</td>
+                    <td class="p-4">
+                        <div class="text-[10px] text-gray-400">
+                            ${order.items.map(i => `${i.name} (${i.quantity})`).join('، ')}
+                        </div>
+                    </td>
+                    <td class="p-4 font-black">${order.total} ج.م</td>
+                    <td class="p-4">
+                        <span class="status-badge ${
+                            order.status === 'completed' ? 'status-completed' : 
+                            order.status === 'deleted' ? 'bg-red-500/10 text-red-500' : 
+                            'status-pending'
+                        }">
+                            ${order.status === 'completed' ? 'مكتمل' : 
+                              order.status === 'deleted' ? 'ملغي' : 
+                              'قيد الانتظار'}
+                        </span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openHistoryModal() {
+            document.getElementById('history-modal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('history-modal').classList.add('hidden');
         }
 
         async function completeOrder(id) {
@@ -295,10 +434,10 @@
             if (confirm('هل أنت متأكد من إلغاء هذا الطلب؟')) {
                 const { error } = await supabaseClient
                     .from('orders')
-                    .delete()
+                    .update({ status: 'deleted' })
                     .eq('id', id);
                 
-                if (error) alert('خطأ في حذف الطلب');
+                if (error) alert('خطأ في إلغاء الطلب');
             }
         }
 
