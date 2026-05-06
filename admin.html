@@ -15,6 +15,9 @@
         .admin-card { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); }
         .btn-red { background: #FF2400; transition: 0.3s; }
         .btn-red:hover { background: #CC1D00; transform: scale(1.02); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #FF2400; border-radius: 10px; }
     </style>
 </head>
 <body class="min-h-screen pb-20">
@@ -32,7 +35,7 @@
         </div>
     </div>
 
-    <!-- Admin Content (Hidden by default) -->
+    <!-- Admin Content -->
     <div id="admin-content" class="hidden">
         <nav class="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
             <div class="container mx-auto px-6 py-4 flex justify-between items-center">
@@ -42,36 +45,47 @@
                     </svg>
                     <span class="text-xl font-black">لوحة تحكم LOCATION</span>
                 </div>
-                <button onclick="logout()" class="text-gray-400 hover:text-white transition-colors">خروج</button>
+                <div class="flex items-center gap-6">
+                    <button onclick="openQRModal()" class="flex items-center gap-2 text-gray-400 hover:text-white transition-all font-bold text-sm">
+                        <i data-lucide="qr-code" class="w-4 h-4 text-red-600"></i> رمز المنيو
+                    </button>
+                    <button onclick="logout()" class="flex items-center gap-2 text-gray-400 hover:text-red-500 transition-all font-bold text-sm">
+                        <i data-lucide="log-out" class="w-4 h-4"></i> خروج
+                    </button>
+                </div>
             </div>
         </nav>
 
         <div class="container mx-auto px-6 pt-12">
-            <div class="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
+            <div class="flex flex-col mb-12 gap-8">
                 <h2 class="text-4xl font-black">إدارة <span class="text-red-600">المنتجات</span></h2>
-                <div class="flex gap-4">
-                    <button onclick="openQRModal()" class="bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-3 rounded-full font-bold text-sm transition-all flex items-center gap-2">
-                        <i data-lucide="qr-code" class="w-4 h-4 text-red-600"></i> رمز المنيو
+                
+                <!-- Action Buttons Row -->
+                <div class="flex flex-wrap gap-4 bg-white/5 p-4 rounded-3xl border border-white/10">
+                    <button onclick="showIngredients()" class="flex-grow md:flex-none bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="coffee" class="w-4 h-4 text-red-600"></i> إدارة المواد الخام
                     </button>
-                    <a href="cashier.html" class="bg-green-600/10 hover:bg-green-600/20 border border-green-600/20 px-6 py-3 rounded-full font-bold text-sm transition-all flex items-center gap-2 text-green-500">
+                    <button onclick="showInventory()" class="flex-grow md:flex-none bg-white/5 hover:bg-white/10 border border-white/10 px-6 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="package" class="w-4 h-4 text-red-600"></i> نظام الجرد
+                    </button>
+                    <a href="cashier.html" class="flex-grow md:flex-none bg-green-600/10 hover:bg-green-600/20 border border-green-600/20 px-6 py-3 rounded-2xl font-bold text-xs transition-all flex items-center justify-center gap-2 text-green-500">
                         <i data-lucide="layout-dashboard" class="w-4 h-4"></i> سيستم الكاشير
                     </a>
-                    <button onclick="showAddModal()" class="btn-red px-8 py-3 rounded-full font-bold flex items-center gap-2">
-                        <i data-lucide="plus"></i> إضافة منتج جديد
+                    <button onclick="showAddModal()" class="flex-grow md:flex-none btn-red px-8 py-3 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(255,36,0,0.3)]">
+                        <i data-lucide="plus" class="w-4 h-4"></i> إضافة منتج جديد
                     </button>
                 </div>
             </div>
 
-            <!-- Products Table/Grid -->
             <div id="admin-products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Products will be injected here -->
+                <!-- Products injected here -->
             </div>
         </div>
     </div>
 
-    <!-- Add/Edit Modal -->
+    <!-- Product Modal -->
     <div id="product-modal" class="fixed inset-0 z-[110] bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-6">
-        <div class="max-w-2xl w-full admin-card p-8 rounded-3xl overflow-y-auto max-h-[90vh]">
+        <div class="max-w-2xl w-full admin-card p-8 rounded-3xl overflow-y-auto max-h-[90vh] custom-scrollbar">
             <h3 id="modal-title" class="text-2xl font-black mb-6">إضافة منتج جديد</h3>
             <form id="product-form" onsubmit="handleProductSubmit(event)" class="space-y-4">
                 <input type="hidden" id="edit-id">
@@ -93,28 +107,58 @@
                         </select>
                     </div>
                 </div>
+                
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold flex items-center gap-2">
+                            <i data-lucide="package" class="w-4 h-4 text-red-600"></i>
+                            تفعيل نظام الجرد لهذا المنتج
+                        </label>
+                        <input type="checkbox" id="prod-track-inventory" onchange="toggleStockFields(this.checked)" class="w-5 h-5 accent-red-600">
+                    </div>
+                    <div id="stock-fields" class="grid grid-cols-2 gap-4 hidden">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">الكمية الحالية</label>
+                            <input type="number" id="prod-stock" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:border-red-600 outline-none text-sm" placeholder="0">
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1">تنبيه عند نقص الكمية لـ</label>
+                            <input type="number" id="prod-min-stock" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:border-red-600 outline-none text-sm" placeholder="5">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white/5 p-4 rounded-2xl border border-white/10 space-y-4">
+                    <div class="flex items-center justify-between">
+                        <label class="text-sm font-bold flex items-center gap-2">
+                            <i data-lucide="list-checks" class="w-4 h-4 text-red-600"></i>
+                            وصفة المنتج (المكونات الخام)
+                        </label>
+                        <button type="button" onclick="addRecipeRow()" class="text-xs text-red-500 hover:underline">+ إضافة مكون للوصفة</button>
+                    </div>
+                    <div id="recipe-rows" class="space-y-3"></div>
+                </div>
+
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">صورة المنتج</label>
                     <div class="flex flex-col gap-4">
                         <input type="file" id="prod-image-file" accept="image/*" class="hidden" onchange="previewImage(this)">
-                        <button type="button" onclick="document.getElementById('prod-image-file').click()" class="w-full bg-white/5 border border-dashed border-white/20 rounded-xl py-8 flex flex-col items-center justify-center hover:bg-white/10 transition-all group">
-                            <i data-lucide="upload-cloud" class="mb-2 text-gray-400 group-hover:text-red-500"></i>
-                            <span class="text-sm text-gray-400" id="upload-text">اضغط لرفع صورة من جهازك</span>
+                        <button type="button" onclick="document.getElementById('prod-image-file').click()" class="w-full bg-white/5 border border-dashed border-white/20 rounded-xl py-8 flex flex-col items-center justify-center hover:bg-white/10 transition-all">
+                            <i data-lucide="upload-cloud" class="mb-2 text-gray-400"></i>
+                            <span class="text-sm text-gray-400">اضغط لرفع صورة من جهازك</span>
                         </button>
                         <div id="image-preview-container" class="hidden">
                             <img id="image-preview" src="" class="h-32 w-32 object-cover rounded-xl border border-white/10">
                         </div>
-                        <div class="relative">
-                            <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-white/10"></div></div>
-                            <div class="relative flex justify-center text-xs uppercase"><span class="bg-black px-2 text-gray-500">أو استخدم رابط</span></div>
-                        </div>
-                        <input type="text" id="prod-image-url" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:border-red-600 outline-none text-sm" placeholder="https://...">
+                        <input type="text" id="prod-image-url" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:border-red-600 outline-none text-sm" placeholder="أو استخدم رابط صورة: https://...">
                     </div>
                 </div>
+
                 <div>
                     <label class="block text-sm text-gray-400 mb-1">الوصف</label>
                     <textarea id="prod-desc" class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:border-red-600 outline-none h-24"></textarea>
                 </div>
+
                 <div class="flex gap-4 pt-4">
                     <button type="submit" class="flex-grow btn-red py-3 rounded-xl font-bold">حفظ المنتج</button>
                     <button type="button" onclick="closeModal()" class="px-8 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all">إلغاء</button>
@@ -126,19 +170,104 @@
     <!-- QR Code Modal -->
     <div id="qr-modal" class="fixed inset-0 z-[110] bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-6">
         <div class="max-w-md w-full admin-card p-8 rounded-3xl text-center">
-            <h3 class="text-2xl font-black mb-6 flex items-center justify-center gap-2">
-                <i data-lucide="qr-code" class="text-red-600"></i>
-                رمز المنيو (QR Code)
-            </h3>
-            <div class="flex flex-col items-center gap-6">
-                <div id="qrcode" class="bg-white p-4 rounded-2xl shadow-xl inline-block"></div>
-                <div class="flex gap-4 w-full">
-                    <button onclick="downloadQR()" class="flex-grow bg-red-600 hover:bg-red-700 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
-                        <i data-lucide="download" class="w-4 h-4"></i>
-                        تحميل
+            <h3 class="text-2xl font-black mb-6">رمز المنيو (QR Code)</h3>
+            <div id="qrcode" class="bg-white p-4 rounded-2xl shadow-xl inline-block mb-6"></div>
+            <div class="flex gap-4">
+                <button onclick="closeQRModal()" class="w-full px-6 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingredients Modal -->
+    <div id="ingredients-modal" class="fixed inset-0 z-[110] bg-black/95 backdrop-blur-md hidden flex items-center justify-center p-4 md:p-10">
+        <div class="max-w-4xl w-full admin-card p-6 md:p-8 rounded-3xl flex flex-col max-h-[90vh] custom-scrollbar">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-2xl font-black flex items-center gap-3">
+                    <i data-lucide="coffee" class="text-red-600"></i> إدارة المواد الخام
+                </h3>
+                <div class="flex gap-2">
+                    <button onclick="showAddIngredientModal()" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> إضافة خامة جديدة
                     </button>
-                    <button onclick="closeQRModal()" class="px-6 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold transition-all">إغلاق</button>
+                    <button onclick="closeIngredientsModal()" class="p-2 hover:bg-white/10 rounded-full transition-all text-gray-400">
+                        <i data-lucide="x" class="w-6 h-6"></i>
+                    </button>
                 </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right">
+                    <thead class="bg-white/5 sticky top-0">
+                        <tr>
+                            <th class="p-4 text-xs font-bold text-gray-500">اسم الخامة</th>
+                            <th class="p-4 text-xs font-bold text-gray-500">الكمية</th>
+                            <th class="p-4 text-xs font-bold text-gray-500">الوحدة</th>
+                            <th class="p-4 text-xs font-bold text-gray-500">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ingredients-table-body" class="divide-y divide-white/5"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Ingredient Form Modal -->
+    <div id="ingredient-form-modal" class="fixed inset-0 z-[120] bg-black/90 backdrop-blur-sm hidden flex items-center justify-center p-6">
+        <div class="max-w-md w-full admin-card p-8 rounded-3xl">
+            <h3 id="ing-modal-title" class="text-xl font-black mb-6">إضافة خامة جديدة</h3>
+            <form id="ingredient-form" onsubmit="handleIngredientSubmit(event)" class="space-y-4">
+                <input type="hidden" id="edit-ing-id">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">اسم الخامة</label>
+                    <input type="text" id="ing-name" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:border-red-600 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">الكمية المتاحة</label>
+                        <input type="number" step="0.01" id="ing-stock" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:border-red-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">الوحدة</label>
+                        <select id="ing-unit" class="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-2">
+                            <option value="جرام">جرام</option>
+                            <option value="مل">مل</option>
+                            <option value="قطعة">قطعة</option>
+                            <option value="كيلو">كيلو</option>
+                            <option value="لتر">لتر</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">تنبيه عند نقص الكمية لـ</label>
+                    <input type="number" step="0.01" id="ing-min-stock" required class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2 focus:border-red-600 outline-none">
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button type="submit" class="flex-grow btn-red py-3 rounded-xl font-bold">حفظ</button>
+                    <button type="button" onclick="closeIngredientFormModal()" class="px-8 py-3 bg-white/5 hover:bg-white/10 rounded-xl font-bold">إلغاء</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Inventory Modal -->
+    <div id="inventory-modal" class="fixed inset-0 z-[110] bg-black/95 backdrop-blur-md hidden flex items-center justify-center p-4 md:p-10">
+        <div class="max-w-5xl w-full admin-card p-6 md:p-8 rounded-3xl flex flex-col max-h-[90vh] custom-scrollbar">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-2xl font-black flex items-center gap-3"><i data-lucide="package" class="text-red-600"></i> نظام الجرد</h3>
+                <button onclick="closeInventoryModal()" class="p-2 hover:bg-white/10 rounded-full transition-all text-gray-400"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-right">
+                    <thead class="bg-white/5 sticky top-0">
+                        <tr>
+                            <th class="p-4 text-xs font-bold text-gray-500">المنتج</th>
+                            <th class="p-4 text-xs font-bold text-gray-500">التصنيف</th>
+                            <th class="p-4 text-xs font-bold text-gray-500">الكمية</th>
+                            <th class="p-4 text-xs font-bold text-gray-500">الحالة</th>
+                            <th class="p-4 text-xs font-bold text-gray-500">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-table-body" class="divide-y divide-white/5"></tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -149,87 +278,17 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4dnh5bm9lc25waWl0bGJnbHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3NzA2NjcsImV4cCI6MjA5MzM0NjY2N30.ZZ5drqV3hnO68ZTZ1nkhrs_JN3lz_987fIDsLeyYSgE';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        const defaultProducts = [
-            {
-                id: 1,
-                name: "إسبريسو",
-                price: 45,
-                category: "قهوة ساخنة",
-                image: "https://images.unsplash.com/photo-1510591509098-f4fdc6d0ff04?auto=format&fit=crop&q=80&w=500",
-                description: "قهوة مركزة وغنية بالنكهة"
-            },
-            {
-                id: 2,
-                name: "كابتشينو",
-                price: 65,
-                category: "قهوة ساخنة",
-                image: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&q=80&w=500",
-                description: "إسبريسو مع حليب مبخر ورغوة غنية"
-            },
-            {
-                id: 3,
-                name: "لاتيه بارد",
-                price: 75,
-                category: "مشروبات باردة",
-                image: "https://images.unsplash.com/photo-1517701604599-bb29b565090c?auto=format&fit=crop&q=80&w=500",
-                description: "إسبريسو مع حليب بارد وثلج"
-            },
-            {
-                id: 4,
-                name: "موكا مثلجة",
-                price: 85,
-                category: "مشروبات باردة",
-                image: "https://images.unsplash.com/photo-1572442388796-11668a67e53d?auto=format&fit=crop&q=80&w=500",
-                description: "مزيج الشوكولاتة والقهوة مع الثلج"
-            },
-            {
-                id: 5,
-                name: "كيكة الشوكولاتة",
-                price: 90,
-                category: "حلويات",
-                image: "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&q=80&w=500",
-                description: "كيكة غنية بقطع الشوكولاتة الذائبة"
-            },
-            {
-                id: 6,
-                name: "تشيز كيك",
-                price: 95,
-                category: "حلويات",
-                image: "https://images.unsplash.com/photo-1524350300363-0233e515918e?auto=format&fit=crop&q=80&w=500",
-                description: "تشيز كيك كريمي مع صوص التوت"
-            },
-            {
-                id: 7,
-                name: "فلات وايت",
-                price: 70,
-                category: "قهوة ساخنة",
-                image: "https://images.unsplash.com/photo-1551033406-611cf9a28f67?auto=format&fit=crop&q=80&w=500",
-                description: "توازن مثالي بين الإسبريسو والحليب"
-            },
-            {
-                id: 8,
-                name: "سموثي مانجو",
-                price: 80,
-                category: "مشروبات باردة",
-                image: "https://images.unsplash.com/photo-1525385133335-842822916523?auto=format&fit=crop&q=80&w=500",
-                description: "مانجو طازجة ومثلجة"
-            }
-        ];
-
         let products = [];
+        let ingredients = [];
 
         async function fetchAdminProducts() {
-            const { data, error } = await supabaseClient
-                .from('products')
-                .select('*');
-            
-            if (error) {
-                console.error('Error:', error);
-                products = defaultProducts;
-            } else {
-                products = data.length > 0 ? data : defaultProducts;
-            }
-            renderAdminProducts();
+            const { data, error } = await supabaseClient.from('products').select('*, product_recipes(*)');
+            if (!error) { products = data; renderAdminProducts(); }
+        }
+
+        async function fetchIngredients() {
+            const { data, error } = await supabaseClient.from('ingredients').select('*');
+            if (!error) { ingredients = data; renderIngredients(); }
         }
 
         function checkPassword() {
@@ -238,60 +297,18 @@
                 document.getElementById('login-overlay').style.display = 'none';
                 document.getElementById('admin-content').classList.remove('hidden');
                 fetchAdminProducts();
+                fetchIngredients();
                 lucide.createIcons();
             } else {
                 document.getElementById('login-error').classList.remove('hidden');
             }
         }
 
-        let qrGenerated = false;
-        function openQRModal() {
-            document.getElementById('qr-modal').classList.remove('hidden');
-            if (!qrGenerated) {
-                const siteURL = window.location.origin;
-                new QRCode(document.getElementById("qrcode"), {
-                    text: siteURL,
-                    width: 256,
-                    height: 256,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
-                });
-                qrGenerated = true;
-            }
-            lucide.createIcons();
-        }
-
-        function closeQRModal() {
-            document.getElementById('qr-modal').classList.add('hidden');
-        }
-
-        function downloadQR() {
-            const canvas = document.querySelector("#qrcode canvas");
-            if (!canvas) {
-                const img = document.querySelector("#qrcode img");
-                if (img) {
-                    const link = document.createElement("a");
-                    link.download = "qr-code.png";
-                    link.href = img.src;
-                    link.click();
-                }
-                return;
-            }
-            const link = document.createElement("a");
-            link.download = "qr-code.png";
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-        }
-
-        function logout() {
-            location.reload();
-        }
-
         function renderAdminProducts() {
             const grid = document.getElementById('admin-products-grid');
             grid.innerHTML = products.map(p => `
-                <div class="admin-card rounded-2xl overflow-hidden flex flex-col">
+                <div class="admin-card rounded-2xl overflow-hidden flex flex-col relative">
+                    ${p.is_inventory_tracked && p.stock_quantity <= p.min_stock_level ? `<div class="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-bold px-2 py-1 rounded-full z-10 animate-pulse">مخزون منخفض</div>` : ''}
                     <img src="${p.image}" class="h-40 w-full object-cover opacity-60">
                     <div class="p-6">
                         <div class="flex justify-between items-start mb-2">
@@ -309,108 +326,191 @@
             lucide.createIcons();
         }
 
+        // Product Modal Logic
         function showAddModal() {
             document.getElementById('modal-title').innerText = "إضافة منتج جديد";
             document.getElementById('product-form').reset();
             document.getElementById('edit-id').value = "";
+            document.getElementById('recipe-rows').innerHTML = "";
             document.getElementById('image-preview-container').classList.add('hidden');
-            document.getElementById('upload-text').innerText = "اضغط لرفع صورة من جهازك";
             document.getElementById('product-modal').classList.remove('hidden');
+            toggleStockFields(false);
         }
-
-        function closeModal() {
-            document.getElementById('product-modal').classList.add('hidden');
-        }
-
-        function previewImage(input) {
-            if (input.files && input.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('image-preview').src = e.target.result;
-                    document.getElementById('image-preview-container').classList.remove('hidden');
-                    document.getElementById('upload-text').innerText = "تم اختيار صورة: " + input.files[0].name;
-                }
-                reader.readAsDataURL(input.files[0]);
-            }
-        }
+        function closeModal() { document.getElementById('product-modal').classList.add('hidden'); }
+        function toggleStockFields(checked) { document.getElementById('stock-fields').classList.toggle('hidden', !checked); }
 
         async function handleProductSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('edit-id').value;
-            const urlInput = document.getElementById('prod-image-url');
-            
-            let imageData = document.getElementById('image-preview').src;
-            if (!imageData || imageData === "" || imageData === window.location.href) {
-                imageData = urlInput.value;
-            }
-
+            const isTracked = document.getElementById('prod-track-inventory').checked;
             const productData = {
                 name: document.getElementById('prod-name').value,
                 price: parseFloat(document.getElementById('prod-price').value),
                 category: document.getElementById('prod-category').value,
-                image: imageData,
-                description: document.getElementById('prod-desc').value
+                image: document.getElementById('image-preview').src || document.getElementById('prod-image-url').value,
+                description: document.getElementById('prod-desc').value,
+                is_inventory_tracked: isTracked,
+                stock_quantity: isTracked ? parseInt(document.getElementById('prod-stock').value || 0) : null,
+                min_stock_level: isTracked ? parseInt(document.getElementById('prod-min-stock').value || 5) : null
             };
 
-            let error;
+            let productId = id;
             if (id) {
-                // Update existing
-                const { error: updateError } = await supabaseClient
-                    .from('products')
-                    .update(productData)
-                    .eq('id', parseInt(id));
-                error = updateError;
+                await supabaseClient.from('products').update(productData).eq('id', id);
             } else {
-                // Insert new
-                const { error: insertError } = await supabaseClient
-                    .from('products')
-                    .insert([productData]);
-                error = insertError;
+                const { data } = await supabaseClient.from('products').insert([productData]).select();
+                if (data) productId = data[0].id;
             }
 
-            if (error) {
-                alert('خطأ في حفظ المنتج: ' + error.message);
-            } else {
-                fetchAdminProducts();
-                closeModal();
-            }
+            const recipe = [];
+            document.querySelectorAll('.recipe-row').forEach(row => {
+                const ingId = row.querySelector('.ingredient-select').value;
+                const qty = row.querySelector('.ingredient-qty').value;
+                if (ingId && qty) recipe.push({ product_id: productId, ingredient_id: parseInt(ingId), quantity_needed: parseFloat(qty) });
+            });
+
+            await supabaseClient.from('product_recipes').delete().eq('product_id', productId);
+            if (recipe.length > 0) await supabaseClient.from('product_recipes').insert(recipe);
+
+            fetchAdminProducts();
+            closeModal();
         }
 
         function editProduct(id) {
             const p = products.find(prod => prod.id === id);
             if (!p) return;
-
             document.getElementById('modal-title').innerText = "تعديل المنتج";
             document.getElementById('edit-id').value = p.id;
             document.getElementById('prod-name').value = p.name;
             document.getElementById('prod-price').value = p.price;
             document.getElementById('prod-category').value = p.category;
-            
-            if (p.image.startsWith('data:')) {
-                document.getElementById('image-preview').src = p.image;
-                document.getElementById('image-preview-container').classList.remove('hidden');
-                document.getElementById('prod-image-url').value = "";
-            } else {
-                document.getElementById('prod-image-url').value = p.image;
-                document.getElementById('image-preview-container').classList.add('hidden');
+            document.getElementById('prod-track-inventory').checked = p.is_inventory_tracked;
+            toggleStockFields(p.is_inventory_tracked);
+            if (p.is_inventory_tracked) {
+                document.getElementById('prod-stock').value = p.stock_quantity;
+                document.getElementById('prod-min-stock').value = p.min_stock_level;
             }
-            
-            document.getElementById('prod-desc').value = p.description;
+            document.getElementById('recipe-rows').innerHTML = "";
+            if (p.product_recipes) p.product_recipes.forEach(r => addRecipeRow(r.ingredient_id, r.quantity_needed));
             document.getElementById('product-modal').classList.remove('hidden');
         }
 
         async function deleteProduct(id) {
-            if (confirm('هل أنت متأكد من حذف هذا المنتج؟')) {
-                const { error } = await supabaseClient
-                    .from('products')
-                    .delete()
-                    .eq('id', id);
-                
-                if (error) {
-                    alert('خطأ في حذف المنتج: ' + error.message);
-                } else {
-                    fetchAdminProducts();
+            if (confirm('حذف المنتج؟')) {
+                await supabaseClient.from('products').delete().eq('id', id);
+                fetchAdminProducts();
+            }
+        }
+
+        // Ingredients Logic
+        function showIngredients() { document.getElementById('ingredients-modal').classList.remove('hidden'); renderIngredients(); }
+        function closeIngredientsModal() { document.getElementById('ingredients-modal').classList.add('hidden'); }
+        function renderIngredients() {
+            const tbody = document.getElementById('ingredients-table-body');
+            tbody.innerHTML = ingredients.map(ing => `
+                <tr class="hover:bg-white/5 transition-all">
+                    <td class="p-4 font-bold">${ing.name}</td>
+                    <td class="p-4 font-black ${ing.stock_quantity <= ing.min_stock_level ? 'text-red-500' : 'text-green-500'}">${ing.stock_quantity}</td>
+                    <td class="p-4 text-xs text-gray-500">${ing.unit}</td>
+                    <td class="p-4">
+                        <button onclick="editIngredient(${ing.id})" class="text-xs text-blue-500 ml-3">تعديل</button>
+                        <button onclick="deleteIngredient(${ing.id})" class="text-xs text-red-500">حذف</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function showAddIngredientModal() {
+            document.getElementById('ing-modal-title').innerText = "إضافة خامة جديدة";
+            document.getElementById('ingredient-form').reset();
+            document.getElementById('edit-ing-id').value = "";
+            document.getElementById('ingredient-form-modal').classList.remove('hidden');
+        }
+        function closeIngredientFormModal() { document.getElementById('ingredient-form-modal').classList.add('hidden'); }
+
+        async function handleIngredientSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-ing-id').value;
+            const data = {
+                name: document.getElementById('ing-name').value,
+                stock_quantity: parseFloat(document.getElementById('ing-stock').value),
+                unit: document.getElementById('ing-unit').value,
+                min_stock_level: parseFloat(document.getElementById('ing-min-stock').value)
+            };
+            if (id) await supabaseClient.from('ingredients').update(data).eq('id', id);
+            else await supabaseClient.from('ingredients').insert([data]);
+            fetchIngredients();
+            closeIngredientFormModal();
+        }
+
+        function editIngredient(id) {
+            const ing = ingredients.find(i => i.id === id);
+            if (!ing) return;
+            document.getElementById('ing-modal-title').innerText = "تعديل خامة";
+            document.getElementById('edit-ing-id').value = ing.id;
+            document.getElementById('ing-name').value = ing.name;
+            document.getElementById('ing-stock').value = ing.stock_quantity;
+            document.getElementById('ing-unit').value = ing.unit;
+            document.getElementById('ing-min-stock').value = ing.min_stock_level;
+            document.getElementById('ingredient-form-modal').classList.remove('hidden');
+        }
+
+        async function deleteIngredient(id) {
+            if (confirm('حذف هذه الخامة؟')) {
+                await supabaseClient.from('ingredients').delete().eq('id', id);
+                fetchIngredients();
+            }
+        }
+
+        // Recipe Row Logic
+        function addRecipeRow(ingId = '', qty = '') {
+            const container = document.getElementById('recipe-rows');
+            const rowId = Date.now();
+            const rowHtml = `
+                <div class="flex items-center gap-2 recipe-row" id="recipe-row-${rowId}">
+                    <select class="flex-grow bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-red-600 ingredient-select">
+                        <option value="">اختر الخامة</option>
+                        ${ingredients.map(ing => `<option value="${ing.id}" ${ing.id == ingId ? 'selected' : ''}>${ing.name} (${ing.unit})</option>`).join('')}
+                    </select>
+                    <input type="number" step="0.01" placeholder="الكمية" value="${qty}" class="w-24 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs outline-none focus:border-red-600 ingredient-qty">
+                    <button type="button" onclick="document.getElementById('recipe-row-${rowId}').remove()" class="p-2 text-red-500 hover:bg-red-500/10 rounded-lg"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', rowHtml);
+            lucide.createIcons();
+        }
+
+        // QR & Inventory Modals
+        function openQRModal() {
+            document.getElementById('qr-modal').classList.remove('hidden');
+            const qrEl = document.getElementById("qrcode");
+            qrEl.innerHTML = "";
+            new QRCode(qrEl, { text: window.location.origin, width: 256, height: 256 });
+        }
+        function closeQRModal() { document.getElementById('qr-modal').classList.add('hidden'); }
+        function showInventory() { document.getElementById('inventory-modal').classList.remove('hidden'); renderInventory(); }
+        function closeInventoryModal() { document.getElementById('inventory-modal').classList.add('hidden'); }
+        function renderInventory() {
+            const tracked = products.filter(p => p.is_inventory_tracked);
+            document.getElementById('inventory-table-body').innerHTML = tracked.map(p => `
+                <tr class="hover:bg-white/5 transition-all">
+                    <td class="p-4 flex items-center gap-3"><img src="${p.image}" class="w-10 h-10 rounded-lg object-cover"><b>${p.name}</b></td>
+                    <td class="p-4 text-xs">${p.category}</td>
+                    <td class="p-4 font-black">${p.stock_quantity}</td>
+                    <td class="p-4"><span class="px-2 py-1 rounded-full text-[10px] ${p.stock_quantity <= p.min_stock_level ? 'bg-red-600/20 text-red-500' : 'bg-green-600/20 text-green-500'}">${p.stock_quantity <= p.min_stock_level ? 'منخفض' : 'متوفر'}</span></td>
+                    <td class="p-4"><button onclick="editProduct(${p.id})" class="text-xs text-blue-500">تعديل</button></td>
+                </tr>
+            `).join('');
+        }
+        function logout() { location.reload(); }
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    document.getElementById('image-preview').src = e.target.result;
+                    document.getElementById('image-preview-container').classList.remove('hidden');
                 }
+                reader.readAsDataURL(input.files[0]);
             }
         }
 

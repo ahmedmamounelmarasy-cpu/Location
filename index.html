@@ -123,7 +123,24 @@
 </head>
 <body>
     <div id="loader">
-        <div class="loader-ring"></div>
+        <div class="flex flex-col items-center">
+            <div id="splash-logo" class="mb-6 opacity-0 scale-50">
+                <svg class="h-32 w-32 text-red-600 drop-shadow-[0_0_15px_rgba(255,36,0,0.5)]" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                </svg>
+            </div>
+            <div id="splash-text" class="flex gap-2" dir="ltr">
+                <span class="splash-char opacity-0 translate-y-4 text-4xl md:text-6xl font-black tracking-widest text-white">L</span>
+                <span class="splash-char opacity-0 translate-y-4 text-4xl md:text-6xl font-black tracking-widest text-white">O</span>
+                <span class="splash-char opacity-0 translate-y-4 text-4xl md:text-6xl font-black tracking-widest text-white">C</span>
+                <span class="splash-char opacity-0 translate-y-4 text-4xl md:text-6xl font-black tracking-widest text-white">A</span>
+                <span class="splash-char opacity-0 translate-y-4 text-4xl md:text-6xl font-black tracking-widest text-white">T</span>
+                <span class="splash-char opacity-0 translate-y-4 text-4xl md:text-6xl font-black tracking-widest text-white">I</span>
+                <span class="splash-char opacity-0 translate-y-4 text-4xl md:text-6xl font-black tracking-widest text-white">O</span>
+                <span class="splash-char opacity-0 translate-y-4 text-4xl md:text-6xl font-black tracking-widest text-white">N</span>
+            </div>
+            <div id="splash-line" class="w-0 h-1 bg-red-600 mt-4 rounded-full"></div>
+        </div>
     </div>
     <!-- Navigation -->
     <nav class="fixed top-0 w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10">

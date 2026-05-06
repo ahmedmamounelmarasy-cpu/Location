@@ -80,7 +80,7 @@ let products = [];
 async function fetchProducts() {
     const { data, error } = await supabaseClient
         .from('products')
-        .select('*');
+        .select('*, product_recipes(*)');
     
     if (error) {
         console.error('Error fetching products:', error);
@@ -120,10 +120,16 @@ function renderProducts(filter = 'الكل', isUpdate = false) {
     productsGrid.innerHTML = filteredProducts.map(product => {
         const cartItem = cart.find(item => item.id === product.id);
         const quantity = cartItem ? cartItem.quantity : 0;
+        const isOutOfStock = product.is_inventory_tracked && product.stock_quantity <= 0;
 
         return `
-            <div class="product-card rounded-3xl overflow-hidden ${isUpdate ? 'opacity-100 transform-none' : 'scroll-reveal'}">
+            <div class="product-card rounded-3xl overflow-hidden ${isUpdate ? 'opacity-100 transform-none' : 'scroll-reveal'} ${isOutOfStock ? 'opacity-60 grayscale' : ''}">
                 <div class="relative h-40 md:h-64">
+                    ${isOutOfStock ? `
+                        <div class="absolute inset-0 z-20 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+                            <span class="bg-red-600 text-white px-4 py-2 rounded-xl font-bold text-sm shadow-xl">نفذ من المخزون</span>
+                        </div>
+                    ` : ''}
                     <img src="${product.image}" alt="${product.name}" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
                     <div class="absolute bottom-3 right-3 left-3">
@@ -138,7 +144,11 @@ function renderProducts(filter = 'الكل', isUpdate = false) {
                             <span class="text-[10px] md:text-xs text-gray-400 mr-1">ج.م</span>
                         </div>
                         
-                        ${quantity === 0 ? `
+                        ${isOutOfStock ? `
+                            <button disabled class="p-2 md:p-3 bg-white/5 text-gray-600 rounded-xl md:rounded-2xl cursor-not-allowed">
+                                <i data-lucide="slash" class="w-4 h-4 md:w-6 md:h-6"></i>
+                            </button>
+                        ` : (quantity === 0 ? `
                             <button onclick="addToCart(${product.id})" class="p-2 md:p-3 bg-white/10 hover:bg-red-600 rounded-xl md:rounded-2xl transition-all group">
                                 <i data-lucide="plus" class="w-4 h-4 md:w-6 md:h-6 group-hover:scale-110 transition-transform"></i>
                             </button>
@@ -152,7 +162,7 @@ function renderProducts(filter = 'الكل', isUpdate = false) {
                                     <i data-lucide="plus" class="w-3 h-3 md:w-4 md:h-4 text-white"></i>
                                 </button>
                             </div>
-                        `}
+                        `)}
                     </div>
                 </div>
             </div>
@@ -298,6 +308,48 @@ function closeCartSidebar() {
     cartSidebar.classList.add('-translate-x-full');
 }
 
+// Splash Screen Animation
+function initSplashScreen() {
+    const tl = gsap.timeline({
+        onComplete: () => {
+            gsap.to("#loader", {
+                opacity: 0,
+                duration: 0.8,
+                delay: 0.5,
+                onComplete: () => {
+                    document.getElementById('loader').style.display = 'none';
+                    initAnimations(); // Start main hero animations after splash
+                }
+            });
+        }
+    });
+
+    tl.to("#splash-logo", {
+        opacity: 1,
+        scale: 1,
+        duration: 1.2,
+        ease: "back.out(1.7)"
+    })
+    .to(".splash-char", {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power2.out"
+    }, "-=0.5")
+    .to("#splash-line", {
+        width: "100%",
+        duration: 0.8,
+        ease: "power4.inOut"
+    }, "-=0.3")
+    .to("#splash-logo", {
+        filter: "drop-shadow(0 0 30px rgba(255, 36, 0, 0.8))",
+        duration: 0.5,
+        yoyo: true,
+        repeat: 1
+    });
+}
+
 // GSAP Animations
 function initAnimations() {
     gsap.registerPlugin(ScrollTrigger);
@@ -317,7 +369,6 @@ function initAnimations() {
 async function checkout() {
     if (cart.length === 0) return;
     
-    // Validate Table Number
     const tableSelect = document.getElementById('table-number');
     const tableNumber = tableSelect ? tableSelect.value : '';
     const orderNote = document.getElementById('order-note')?.value || '';
@@ -325,60 +376,92 @@ async function checkout() {
     if (!tableNumber) {
         alert('يرجى اختيار رقم الطاولة قبل تأكيد الطلب');
         tableSelect.focus();
-        tableSelect.classList.add('border-red-600');
-        setTimeout(() => tableSelect.classList.remove('border-red-600'), 2000);
         return;
     }
 
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    // 1. Fetch current ingredients stock for validation
+    const { data: ingredients, error: ingError } = await supabaseClient.from('ingredients').select('*');
+    if (ingError) {
+        alert('حدث خطأ في الاتصال بقاعدة البيانات');
+        return;
+    }
 
-    // Create Order Object for Supabase
+    // 2. Validate availability (Products and Ingredients)
+    for (const item of cart) {
+        const product = products.find(p => p.id === item.id);
+        if (!product) continue;
+
+        // Check product stock if tracked
+        if (product.is_inventory_tracked && product.stock_quantity < item.quantity) {
+            alert(`عذراً، "${item.name}" غير متوفر بالكمية المطلوبة.`);
+            return;
+        }
+
+        // Check ingredients stock if recipe exists
+        if (product.product_recipes && product.product_recipes.length > 0) {
+            for (const recipeItem of product.product_recipes) {
+                const ingredient = ingredients.find(ing => ing.id === recipeItem.ingredient_id);
+                const totalNeeded = recipeItem.quantity_needed * item.quantity;
+                if (ingredient && ingredient.stock_quantity < totalNeeded) {
+                    alert(`عذراً، المكونات الخام لـ "${item.name}" غير كافية حالياً.`);
+                    return;
+                }
+            }
+        }
+    }
+
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
     const newOrder = {
-        items: cart.map(item => ({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity
-        })),
+        items: cart.map(item => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity })),
         total: total,
         table_number: tableNumber,
         note: orderNote,
         status: 'pending'
     };
 
-    // Save to Supabase
-    const { data, error } = await supabaseClient
-        .from('orders')
-        .insert([newOrder]);
-
-    if (error) {
-        console.error('Error saving order:', error);
-        alert('حدث خطأ: ' + (error.message || 'يرجى التأكد من إعدادات Supabase'));
+    // 3. Save order
+    const { data: orderData, error: orderError } = await supabaseClient.from('orders').insert([newOrder]).select();
+    if (orderError) {
+        alert('خطأ في إرسال الطلب');
         return;
     }
 
-    // Clear cart and update UI before redirecting
+    // 4. Deduct Stock
+    for (const item of cart) {
+        const product = products.find(p => p.id === item.id);
+        
+        // Deduct Product Stock
+        if (product.is_inventory_tracked) {
+            await supabaseClient.from('products').update({ stock_quantity: product.stock_quantity - item.quantity }).eq('id', item.id);
+        }
+
+        // Deduct Ingredients Stock
+        if (product.product_recipes && product.product_recipes.length > 0) {
+            for (const recipeItem of product.product_recipes) {
+                const ingredient = ingredients.find(ing => ing.id === recipeItem.ingredient_id);
+                if (ingredient) {
+                    const newQty = ingredient.stock_quantity - (recipeItem.quantity_needed * item.quantity);
+                    await supabaseClient.from('ingredients').update({ stock_quantity: newQty }).eq('id', ingredient.id);
+                }
+            }
+        }
+    }
+
+    // Success UI updates
     cart = [];
     if (tableSelect) tableSelect.value = '';
-    const noteEl = document.getElementById('order-note');
-    if (noteEl) noteEl.value = '';
-    
+    document.getElementById('order-note').value = '';
     updateCartUI();
     renderProducts(document.querySelector('.category-btn.active')?.innerText || 'الكل', true);
     closeCartSidebar();
 
-    // Success animation and modal
     const btn = document.getElementById('checkout-btn');
     const originalText = btn.innerText;
     btn.innerText = "تم الإرسال بنجاح!";
     btn.style.backgroundColor = "#22c55e";
-
     setTimeout(() => {
-        // Show success modal
         document.getElementById('success-modal').classList.remove('hidden');
         lucide.createIcons();
-        
-        // Reset button
         btn.innerText = originalText;
         btn.style.backgroundColor = "";
     }, 800);
@@ -396,17 +479,10 @@ document.getElementById('checkout-btn').addEventListener('click', checkout);
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     fetchProducts();
-    initAnimations();
     initCategoryFiltering();
     
-    // Hide loader
+    // Start splash screen when window is ready
     window.addEventListener('load', () => {
-        gsap.to("#loader", {
-            opacity: 0,
-            duration: 0.8,
-            onComplete: () => {
-                document.getElementById('loader').style.display = 'none';
-            }
-        });
+        initSplashScreen();
     });
 });
