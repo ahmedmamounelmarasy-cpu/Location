@@ -9,6 +9,11 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#FF2400">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="LOCATION Cashier">
+    <link rel="apple-touch-icon" href="https://xxvxynoesnpiitlbglpk.supabase.co/storage/v1/object/public/products/logo.png">
     <style>
         :root {
             --primary-red: #FF2400;
@@ -601,6 +606,12 @@
         setInterval(() => {
             orders.forEach(o => o.isNew = false);
         }, 10000);
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js');
+            });
+        }
     </script>
 </body>
 </html>

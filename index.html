@@ -120,6 +120,11 @@
             text-transform: uppercase;
         }
     </style>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#FF2400">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="LOCATION">
+    <link rel="apple-touch-icon" href="https://xxvxynoesnpiitlbglpk.supabase.co/storage/v1/object/public/products/logo.png">
 </head>
 <body>
     <div id="loader">
@@ -285,5 +290,14 @@
     </div>
 
     <script src="script.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker Registered'))
+                    .catch(err => console.log('Service Worker Failed', err));
+            });
+        }
+    </script>
 </body>
 </html>
