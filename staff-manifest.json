@@ -1,0 +1,20 @@
+{
+  "name": "LOCATION Staff",
+  "short_name": "LOC Staff",
+  "start_url": "cashier.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#FF2400",
+  "icons": [
+    {
+      "src": "https://xxvxynoesnpiitlbglpk.supabase.co/storage/v1/object/public/products/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://xxvxynoesnpiitlbglpk.supabase.co/storage/v1/object/public/products/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
